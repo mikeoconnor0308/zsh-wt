@@ -199,11 +199,12 @@ wt-prune() {
   merged_branches=("${(@f)$(git -C "$main_root" branch --format='%(refname:short)' --merged "$base" 2>/dev/null)}")
 
   local -a to_prune
-  while IFS=$'\t' read -r path branch; do
-    [[ -z "$path" || "$path" == "$main_root" || "$path" == "$cur_root" ]] && continue
+  local wt_path branch
+  while IFS=$'\t' read -r wt_path branch; do
+    [[ -z "$wt_path" || "$wt_path" == "$main_root" || "$wt_path" == "$cur_root" ]] && continue
     [[ -z "$branch" ]] && continue
     if (( ${gone_branches[(I)$branch]} )) || (( ${merged_branches[(I)$branch]} )); then
-      to_prune+=("$path	$branch")
+      to_prune+=("$wt_path	$branch")
     fi
   done < <(git -C "$main_root" worktree list --porcelain | awk '
     /^worktree /{ p=substr($0,10) }
@@ -228,10 +229,10 @@ wt-prune() {
   fi
 
   for entry in "${to_prune[@]}"; do
-    local path="${entry%%	*}" branch="${entry##*	}"
-    git -C "$main_root" worktree remove "$path" 2>/dev/null \
-      || git -C "$main_root" worktree remove --force "$path"
-    git -C "$main_root" branch -D "$branch" 2>/dev/null
+    local wt_path="${entry%%	*}" wt_branch="${entry##*	}"
+    git -C "$main_root" worktree remove "$wt_path" 2>/dev/null \
+      || git -C "$main_root" worktree remove --force "$wt_path"
+    git -C "$main_root" branch -D "$wt_branch" 2>/dev/null
   done
   git -C "$main_root" worktree prune
   echo "Done."
